@@ -73,14 +73,16 @@ Wenn du an den Terminen der Spec festhältst, passiert eines von zwei Dingen: du
 
 Deshalb verschiebe ich die Grenzen. Die Regel aus Spec §10 bleibt: **Wenn es eng wird, fällt M5 zusammen, nie die Eval aus M3.**
 
-| | Spec | Dieser Plan | Kalender 2026 |
-|---|---|---|---|
-| **M0** Fundament | — | W1 | Mi 09.09. – Fr 11.09. |
-| **M1** Durchleiten | W1–2 | **W2–W4** | 14.09. – 02.10. |
-| **M2** Robustheit | W3–5 | **W5–W7** | 05.10. – 23.10. |
-| **M3** Eval-Harness | W6–8 | **W8–W10** | 26.10. – 13.11. |
-| **M4** Router & Cache | W9–12 | **W11–W14** | 16.11. – 11.12. |
-| **M5** Dashboard & Abschluss | W13–16 | **W15–W16 + Puffer** | 14.12. – 23.12. |
+| | Spec | Dieser Plan | Kalender 2026 | Status |
+|---|---|---|---|---|
+| **M0** Fundament | — | W1 | Mi 09.09. – Fr 11.09. | ✅ abgeschlossen, im Plan |
+| **M1** Durchleiten | W1–2 | **W2–W4** | 14.09. – 02.10. | läuft |
+| **M2** Robustheit | W3–5 | **W5–W7** | 05.10. – 23.10. | geplant |
+| **M3** Eval-Harness | W6–8 | **W8–W10** | 26.10. – 13.11. | geplant |
+| **M4** Router & Cache | W9–12 | **W11–W14** | 16.11. – 11.12. | geplant |
+| **M5** Dashboard & Abschluss | W13–16 | **W15–W16 + Puffer** | 14.12. – 23.12. | geplant |
+
+M0 hat exakt in sein Fenster gepasst — drei Sessions, Mi bis Fr, kein Rutsch. M1 startet damit wie geplant am 14.09.
 
 M5 ist nur deshalb kurz, weil die Dashboard-Spur ab W8 nebenherläuft. In W15 baust du kein React mehr von Null, du setzt zusammen, was seit sieben Wochen wächst.
 
@@ -106,7 +108,7 @@ Wenn eine Session endet, ohne dass die Aufgabe fertig ist: WIP-Commit auf den Fe
 
 ### Git-Workflow
 
-`main` ist geschützt. Branch Protection mit Required Status Checks wird in W2 eingerichtet (siehe M1-05), und ab da geht nichts mehr direkt auf `main`.
+`main` ist geschützt. Branch Protection mit Required Status Check `test` ist bereits seit M0-03 aktiv (ADR-0004) — direkter Push auf `main` geht seitdem nicht mehr, auch nicht für den Repo-Owner.
 
 ```
 main
@@ -262,7 +264,7 @@ CLAUDE.md verlangt für jede Abhängigkeit eine Begründung. Hier sind alle, die
 | `uvicorn[standard]` | ASGI-Server. Ohne ihn kein Streaming |
 | `psycopg[binary]` | Postgres-Treiber, async-fähig |
 | `redis` | Rate Limits, Cache-Index |
-| `django-rq` | Kennst du aus Videoflix. **Aber:** Django 6 bringt ein eigenes Background-Tasks-Framework mit. Prüfe das in W6 und halte die Wahl in ADR-0011 fest — eventuell sparst du eine Abhängigkeit |
+| `django-rq` | Kennst du aus Videoflix. **Aber:** Django 6 bringt ein eigenes Background-Tasks-Framework mit. Prüfe das in W6 und halte die Wahl in ADR-0013 fest — eventuell sparst du eine Abhängigkeit |
 | `httpx` | **Die zentrale Wahl.** `requests` kann kein async, `urllib` kein sauberes Streaming mit Timeouts. `httpx` kann sync und async, HTTP/2, Streaming, und bringt `MockTransport` für die Tests mit. Eine Abhängigkeit, die drei ersetzt |
 | `sentry-sdk` | Von der Spec gesetzt |
 | `python-dotenv` | Nur für lokale Entwicklung. In Produktion kommen die Werte aus der Container-Umgebung |
@@ -291,6 +293,8 @@ Empfehlung: **Python 3.13 als Projekt-Version**, lokal über `pyenv` oder einen 
 
 Wenn du auf 3.14 bestehst: probiere in M0-02 sofort `pip install psycopg[binary]`. Läuft es durch, bleib dabei und schreib es in den ADR.
 
+**Ergebnis:** Test bestanden — `psycopg[binary]` und `uvicorn[standard]` installierten als vorkompilierte Wheels, kein Compiler-Fehler. Projekt bleibt bei **3.14.3**, dokumentiert in ADR-0002.
+
 Paketverwaltung: `pip` + `venv` + `requirements.txt` / `requirements-dev.txt`. Kein `uv`, kein `poetry` — beides ist nicht installiert, beides wäre eine neue Baustelle in Woche 1, und `pip` reicht für ein Projekt dieser Größe. Versionen pinnen (`django==6.0.4`, nicht `django`), sonst bricht dir CI irgendwann grundlos weg.
 
 ---
@@ -307,9 +311,9 @@ Das ist der Teil, den du explizit wolltest: wann du was einrichten musst, damit 
 | **W1** | Groq-API-Key erzeugen | console.groq.com | Key in lokaler `.env`, Platzhalter in `.env.example` |
 | **W1** | Sentry-Account + zwei Projekte | sentry.io | DSN Backend und Frontend notiert (Anbindung erst W3/W4) |
 | **W1** | Python 3.13 installieren, venv | lokal | `python --version` im venv zeigt 3.13.x |
+| ~~W2~~ **W1** | ✅ Branch Protection auf `main` | GitHub → Settings → Branches | Direkter Push auf `main` wird abgelehnt — vorgezogen in M0-03, ADR-0004 |
+| ~~W2~~ **W1** | ✅ Required Status Check „test" | GitHub → Branch Protection Rule | PR mit rotem Test lässt sich nicht mergen — vorgezogen in M0-03, per Rot-Test-Beweis verifiziert |
 | **W2** | Postgres + Redis lokal | `docker/compose.yml` | Beide Container laufen, `manage.py migrate` geht durch |
-| **W2** | Branch Protection auf `main` | GitHub → Settings → Rules | Direkter Push auf `main` wird abgelehnt |
-| **W2** | Required Status Check „CI" | GitHub → Rules | PR mit rotem Test lässt sich nicht mergen |
 | **W3** | **DNS-Eintrag anlegen** | Cloudflare | A-Record `gateway.lucasgraf.com` → VPS-IP. **Jetzt, nicht in W4** — Propagierung und TLS-Ausstellung brauchen Zeit |
 | **W3** | Sentry im Backend verdrahten | `settings/production.py` | Absichtlicher Fehler erscheint im Dashboard |
 | **W4** | VPS vorbereiten | IONOS per SSH | Verzeichnis, Docker-Netz, Reverse-Proxy-Eintrag für die Subdomain |
@@ -356,7 +360,6 @@ switchboard/
       caching/             exakter und semantischer Cache
       router/              Klassifikation und Kaskade
       evals/               Aufgabenset, Runner, Judge
-    tests/
     manage.py  pyproject.toml  requirements.txt  requirements-dev.txt
   frontend/                React, Vite, Tailwind
   eval-data/               Aufgaben und Rubriken als JSON, versioniert
@@ -373,11 +376,13 @@ switchboard/
 
 **Zweite Anmerkung:** Settings-Split ab Tag 1, nicht nachträglich. `base.py` mit allem Gemeinsamen, `dev.py`/`production.py`/`test.py` mit den Unterschieden. Nachträglich aufzuteilen bedeutet, jede Einstellung einzeln zu prüfen — jetzt kostet es zehn Minuten.
 
+**Dritte Anmerkung, aus M0-02 gelernt:** Kein zentraler `tests/`-Ordner. Tests liegen pro App (`apps/core/test_healthz.py`, später `apps/keys/test_*.py` usw.) — das ist die pytest/Django-Konvention und näher am Code, den sie prüfen, als ein separater Spiegel-Ordner.
+
 ---
 
-## 7. M0 — Fundament (W1, Mi 09.09. – Fr 11.09., 3 Sessions)
+## 7. M0 — Fundament (W1, Mi 09.09. – Fr 11.09., 3 Sessions) — ✅ abgeschlossen
 
-Ziel: Am Freitagabend existiert ein öffentliches Repo mit einem grünen CI-Lauf, und du hast einen Test geschrieben, der etwas Echtes prüft.
+Ziel: Am Freitagabend existiert ein öffentliches Repo mit einem grünen CI-Lauf, und du hast einen Test geschrieben, der etwas Echtes prüft. **Erreicht, exakt im geplanten Fenster.**
 
 ### M0-01 — Repo und Werkzeugkette (1 Session)
 
@@ -394,6 +399,8 @@ Der Ordner liegt untracked im Workspace-Repo. Erst trennen, dann bauen.
 **ADR-0001** anlegen: warum eigenes Repo statt Workspace-Unterordner. Vier Zeilen reichen, aber schreib sie.
 **ADR-0002** anlegen: Python-Version, `pip` statt `uv`/`poetry`, Versionen gepinnt.
 
+**So gelaufen:** Zusätzlich zur reinen Trennung tauchte eine „unrelated histories"-Situation auf — GitHub hatte beim Anlegen automatisch `.gitignore` und eine MIT-Lizenz committed, unabhängig von deinem lokalen ersten Commit. Gelöst über `git show origin/main:LICENSE`, `--amend` (weil der lokale Commit noch nie gepusht war) und `--force-with-lease`. Merke: `gh repo create` interaktiv nach Lizenz/`.gitignore` fragen kann genau das auslösen.
+
 ### M0-02 — Django-Gerüst und der erste Test (1–2 Sessions)
 
 Jetzt beginnt TDD, und zwar an einer Stelle, wo es Sinn ergibt.
@@ -409,15 +416,23 @@ RED: Test schreiben, der `GET /healthz` aufruft und 200 plus `{"status": "ok"}` 
 
 **Kontrolle:** `pytest` grün, `ruff check .` sauber, `mypy backend/` sauber.
 
-### M0-03 — CI, die wirklich blockiert (1 Session)
+**So gelaufen:** Diese Aufgabe hat sich zur eigentlichen Lernsession von M0 entwickelt, deutlich über die ursprünglich veranschlagten 1–2 Sessions hinaus (real: über zwei Tage verteilt). Stolperer, die den Umfang gerechtfertigt haben: `HeathCheckView`-Tippfehler (Import bricht den ganzen URLconf), `myproject.toml` statt `pyproject.toml` (pytest liest die Config nicht, „settings not configured"), die Kopplung „nimmst du `SECRET_KEY` aus `base.py`, muss jede Env-Datei selbst einen setzen" (traf `test.py`, `dev.py` und den Syntaxfehler `os.environ.get['...']` in `production.py`), und `load_dotenv()` zunächst am falschen Ort (`base.py`, wo es auch `production.py` und `test.py` erreicht hätte — gehört nur in `dev.py`). Jeder dieser Fehler wurde über die vier Gates (`pytest`, `ruff check`, `ruff format --check`, `mypy`) sichtbar, bevor er committet wurde — genau der Sinn der Gates.
 
-- `.github/workflows/ci.yml`: Python-Setup, Abhängigkeiten aus Cache, `ruff check`, `ruff format --check`, `mypy`, `pytest`
-- Postgres und Redis als Service-Container im Workflow
-- Branch Protection auf `main`, Required Status Check „CI"
+Zusätzlich entschieden: `requirements.txt`/`requirements-dev.txt` liegen in `backend/` (nicht im Root, wie ein Zwischenstand hatte) — passt zur Repo-Struktur aus Abschnitt 6.
 
-**Der Nachweis (Zone C):** Mach in einem Branch absichtlich einen Test rot. Öffne einen PR. Der Merge-Button muss gesperrt sein. Erst wenn du das gesehen hast, ist die CI eingerichtet — nicht wenn der Workflow einmal grün war.
+### M0-03 — CI, die wirklich blockiert (1 Session, real: 1)
 
-**→ Build in Public, Beitrag 1** (Spec §11). Fragen, die ich dir am Freitag stellen werde: Was ärgert dich an deinem jetzigen Aufbau, bei dem zwei Apps direkt zwei Anbieter rufen? Was willst du in vier Monaten wissen, das du heute nicht weißt? Was ist dein Abbruchkriterium?
+- `.github/workflows/ci.yml`: Checkout, `actions/setup-python` mit `python-version-file: .python-version` und Pip-Cache, dann `ruff check`, `ruff format --check`, `mypy`, `manage.py makemigrations --check --dry-run`, `pytest` — alle Schritte über ein Job-weites `defaults.run.working-directory: backend`
+- **Kein Postgres/Redis als Service-Container** — bewusst verworfen (Widerspruch zum ursprünglichen Plan hier). Nichts im Projekt spricht bislang mit Postgres oder Redis (SQLite bis M1/M2), zwei ungenutzte Service-Container in jedem CI-Lauf wären Abstraktion auf Vorrat. Kommt rein, sobald `DATABASES` tatsächlich auf Postgres zeigt
+- Branch Protection: **Classic Branch Protection Rule** auf `main` (nicht Ruleset — einfacher für einen Branch mit einer Regel, siehe ADR-0004), Required Status Check `test`, „Do not allow bypassing the above settings" aktiv — sonst kann der Repo-Owner die Regel umgehen
+- **Nachweis geführt:** Branch mit absichtlich rotem Test, PR geöffnet, Merge-Button gesperrt gesehen, Test korrigiert, CI grün, Button entsperrt, per Squash-Merge zusammengeführt
+
+**Der Nachweis (Zone C):** Mach in einem Branch absichtlich einen Test rot. Öffne einen PR. Der Merge-Button muss gesperrt sein. Erst wenn du das gesehen hast, ist die CI eingerichtet — nicht wenn der Workflow einmal grün war. ✅ Erledigt.
+
+**ADR-0003:** Backend-Tooling und Repo-Layout (Monorepo-Aufteilung, wo pytest/ruff/mypy-Config liegt, `load_dotenv` nur in `dev.py`).
+**ADR-0004:** Branch Protection (Classic Rule statt Ruleset, Nachweis).
+
+**→ Build in Public, Beitrag 1** (Spec §11) — in Arbeit. Fragen: Was ärgert dich an deinem jetzigen Aufbau, bei dem zwei Apps direkt zwei Anbieter rufen? Was willst du in vier Monaten wissen, das du heute nicht weißt? Was ist dein Abbruchkriterium? Für den Einstieg zusätzlich 2–3 Sätze, was Switchboard überhaupt ist (aus Spec §1) — sonst fehlt Lesern ohne Vorwissen der Kontext.
 
 ---
 
@@ -439,7 +454,7 @@ Bevor du Modelle tippst, entscheide die Felder. Zwei Punkte, an denen man sich i
 
 Felder wie `cache_hit` und `fallback_depth` legst du **jetzt** an, obwohl sie erst in M2/M4 gefüllt werden. Eine Migration heute ist billig; eine Migration im November, nachdem sie auf dem VPS lief, fällt unter die Regel „Migrationen nie nachträglich ändern".
 
-**ADR-0003:** Kostenrepräsentation und Latenzmessung.
+**ADR-0005:** Kostenrepräsentation und Latenzmessung.
 
 **M1-02 · API-Key-Modell, test-first (2 Sessions)** — Zone A
 
@@ -451,7 +466,7 @@ RED zuerst, in dieser Reihenfolge:
 4. Ein deaktivierter Key wird abgelehnt
 5. Der Präfix bleibt lesbar (für die spätere Anzeige)
 
-Dann implementieren. Beim Hashing: kein einfaches `sha256(key)` ohne Salz, und kein `bcrypt` (zu langsam für einen Aufruf pro Request). Überleg dir, was hier angemessen ist, und begründe es in **ADR-0004**. Das ist eine Frage, die im Vorstellungsgespräch kommt.
+Dann implementieren. Beim Hashing: kein einfaches `sha256(key)` ohne Salz, und kein `bcrypt` (zu langsam für einen Aufruf pro Request). Überleg dir, was hier angemessen ist, und begründe es in **ADR-0006**. Das ist eine Frage, die im Vorstellungsgespräch kommt.
 
 **M1-03 · Authentifizierung (1–2 Sessions)** — Zone B
 
@@ -488,9 +503,9 @@ Die Aufgabe: Chunks vom Anbieter kommen an, gehen sofort an den Client raus **un
 Zwei Dinge, die dich Zeit kosten werden, wenn du sie nicht vorher weißt:
 
 - Groq und OpenAI liefern die Token-Zahlen im Stream **nur**, wenn du `stream_options: {"include_usage": true}` mitschickst. Ohne das kommt kein Usage-Chunk, und deine Abrechnung ist leer. Prüfe die aktuelle Doku, das Feld hat sich schon einmal geändert.
-- Wenn der Client die Verbindung abbricht, läuft dein Generator ins Leere. Wo fängst du das ab, und rechnest du dann ab? Das ist eine echte Entscheidung mit zwei vertretbaren Antworten — halte sie in **ADR-0005** fest, und merk sie dir für Beitrag 3.
+- Wenn der Client die Verbindung abbricht, läuft dein Generator ins Leere. Wo fängst du das ab, und rechnest du dann ab? Das ist eine echte Entscheidung mit zwei vertretbaren Antworten — halte sie in **ADR-0007** fest, und merk sie dir für Beitrag 3.
 
-**ADR-0006:** ASGI-Server, Worker-Modell, warum Uvicorn.
+**ADR-0008:** ASGI-Server, Worker-Modell, warum Uvicorn.
 
 ### Woche 4 — Deployment und der erste echte Aufruf
 
@@ -508,7 +523,7 @@ DSN aus der Umgebung, nur in `production.py`. Nachweis: absichtlicher Fehler lan
 
 DNS steht seit W3. Jetzt: Verzeichnis auf dem VPS, Compose-Stack, Reverse-Proxy-Eintrag für `gateway.lucasgraf.com`, TLS. Deploy per GitHub Actions auf `main` oder per Skript über SSH — beides vertretbar, entscheide nach Aufwand.
 
-**ADR-0007:** Deployment-Topologie. Eigener Stack, eigene Postgres- und Redis-Instanz, warum nicht geteilt.
+**ADR-0009:** Deployment-Topologie. Eigener Stack, eigene Postgres- und Redis-Instanz, warum nicht geteilt.
 
 Nachweis: Deploy zweimal hintereinander ohne Handgriff. Ein Deploy, der beim zweiten Mal manuelle Eingriffe braucht, ist kein Deploy.
 
@@ -536,7 +551,7 @@ Base-URL und Gateway-Key in die Vercel-Umgebung, Redeploy, echten Aufruf machen,
 
 Du hast einen Adapter (Groq). Jetzt kommen drei dazu. CLAUDE.md sagt: „Erst der zweite Anwendungsfall rechtfertigt eine Basisklasse" — der ist jetzt da, du darfst abstrahieren.
 
-Die Frage ist nur, **wo** der Schnitt liegt. Zu weit oben und Gemini passt nicht rein; zu weit unten und du duplizierst. Ich lege dir zwei Varianten hin (Protokoll mit vier Methoden vs. abstrakte Basisklasse mit Template-Methode), mit Nachteilen. **ADR-0008.**
+Die Frage ist nur, **wo** der Schnitt liegt. Zu weit oben und Gemini passt nicht rein; zu weit unten und du duplizierst. Ich lege dir zwei Varianten hin (Protokoll mit vier Methoden vs. abstrakte Basisklasse mit Template-Methode), mit Nachteilen. **ADR-0010.**
 
 **M2-02 · Gemini-Adapter (2 Sessions)** — Zone A
 
@@ -556,7 +571,7 @@ Lokal, kostenlos. **Der wichtigste Test hier ist der Fehlerfall:** Laufzeit nich
 
 **M2-05 · Kostenrechnung (2 Sessions)** — Zone A, striktes TDD
 
-Preise gehören **in Daten, nicht in Code**. Eine JSON- oder YAML-Datei pro Modell mit Preis pro Million Eingabe- und Ausgabe-Tokens, versioniert. Wenn ein Anbieter die Preise ändert, änderst du eine Datei, keinen Code — und du kannst rückwirkend nachvollziehen, mit welchem Preis eine alte Zeile gerechnet wurde. **ADR-0009.**
+Preise gehören **in Daten, nicht in Code**. Eine JSON- oder YAML-Datei pro Modell mit Preis pro Million Eingabe- und Ausgabe-Tokens, versioniert. Wenn ein Anbieter die Preise ändert, änderst du eine Datei, keinen Code — und du kannst rückwirkend nachvollziehen, mit welchem Preis eine alte Zeile gerechnet wurde. **ADR-0011.**
 
 Tests: bekannte Token-Zahlen → bekannter Betrag. Rundung an der Grenze. Unbekanntes Modell → definierter Fehler, kein stilles Null. Kostenloser Anbieter → null, aber protokolliert.
 
@@ -568,7 +583,7 @@ Der Puffer aus M1-07 existiert. Jetzt: Usage-Chunk finden, auswerten, in Kosten 
 
 **M2-07 · Rate Limit über Redis (2 Sessions)** — Zone A
 
-Erst der Algorithmus: fixes Fenster (einfach, aber Burst an der Fenstergrenze) oder Sliding Window (fairer, aufwendiger). **ADR-0010** mit der Wahl.
+Erst der Algorithmus: fixes Fenster (einfach, aber Burst an der Fenstergrenze) oder Sliding Window (fairer, aufwendiger). **ADR-0012** mit der Wahl.
 
 Tests gegen echten Redis, eigene Datenbanknummer, injizierte Uhr. Fälle: unter dem Limit, genau am Limit, über dem Limit, Fenster läuft ab. Und: 429 muss einen korrekten `Retry-After`-Header haben — ein 429 ohne diesen Header ist für den Client wertlos.
 
@@ -591,7 +606,7 @@ Drei Zustände: Closed, Open, Half-Open. Tests entlang der Zustandsübergänge, 
 - Half-Open, Probeanfrage erfolgreich → Closed
 - Half-Open, Probeanfrage fehlgeschlagen → wieder Open
 
-Der Half-Open-Zustand ist der Punkt, nach dem Beitrag 4 fragt: Ohne ihn schickst du beim Ablauf des Timers den vollen Verkehr auf einen Anbieter, der sich vielleicht noch nicht erholt hat. **ADR-0011** mit Schwellenwerten und Begründung.
+Der Half-Open-Zustand ist der Punkt, nach dem Beitrag 4 fragt: Ohne ihn schickst du beim Ablauf des Timers den vollen Verkehr auf einen Anbieter, der sich vielleicht noch nicht erholt hat. **ADR-0013** mit Schwellenwerten und Begründung.
 
 **M2-10 · Fallback-Kette (1–2 Sessions)** — Zone A
 
@@ -623,7 +638,7 @@ Der wichtigste Meilenstein. Spec: *„Ohne ihn ist das Projekt eine weitere Demo
 
 Warum von Hand: Ein generiertes Eval-Set misst, wie gut ein Modell zu einem anderen Modell passt. Deine Aufgaben sollen aus deinen echten Anwendungsfällen kommen — Code-A-Cuisine und Quizly geben dir realistische Vorlagen.
 
-Pro Aufgabe: ID, Kategorie, Prompt, optional erwartete Ausgabe, Bewertungskriterien. Das Format legst du einmal fest und änderst es nicht mehr, sonst sind alte Ergebnisse unbrauchbar. **ADR-0012.**
+Pro Aufgabe: ID, Kategorie, Prompt, optional erwartete Ausgabe, Bewertungskriterien. Das Format legst du einmal fest und änderst es nicht mehr, sonst sind alte Ergebnisse unbrauchbar. **ADR-0014.**
 
 Das sind ~15 Aufgaben pro Session. Zieh es über die Woche, nicht an einem Stück — das Set wird besser, wenn du zwischendurch darüber nachdenkst.
 
@@ -687,7 +702,7 @@ Qualität, Kosten, Latenz pro Modell und Kategorie. Recharts einführen, ein Dia
 
 **Abschlusskriterium:** Die Tabelle existiert, und du weißt, wie zuverlässig dein Judge ist.
 
-**ADR-0013:** Judge-Modell, Rubrik-Version, gemessene Übereinstimmung.
+**ADR-0015:** Judge-Modell, Rubrik-Version, gemessene Übereinstimmung.
 
 **→ Build in Public, Beitrag 6** — laut Spec der stärkste der Reihe. Fragen: Wie viele deiner 50 Handlabels stimmten mit dem Judge überein? Bei welcher Art Aufgabe lag er daneben? Was hast du am Rubrik-Prompt geändert und wie hat sich die Übereinstimmung verschoben? Würdest du dem Judge jetzt trauen?
 
@@ -711,7 +726,7 @@ README aktualisieren.
 - Andere Reihenfolge der Nachrichten → anderer Key
 - `max_tokens` anders → **anderer Key?** Das ist eine echte Entscheidung. Begründe sie
 
-**ADR-0014:** welche Parameter in den Key gehören und welche bewusst nicht.
+**ADR-0016:** welche Parameter in den Key gehören und welche bewusst nicht.
 
 **→ Build in Public, Beitrag 5.** Fragen: Was genau geht schief, wenn der System-Prompt nicht in den Key einfließt? Ist es dir passiert oder hast du es vorher bedacht? Welche Parameter gehören noch rein und welche bewusst nicht?
 
@@ -737,7 +752,7 @@ Die unangenehme Frage: **Cachest du auch Streaming-Antworten?** Ein Cache-Treffe
 
 Gegen das Eval-Set. Wie oft liefert der semantische Cache eine Antwort, die inhaltlich nicht passt? Über mehrere Schwellenwerte messen und die Kurve ansehen.
 
-**ADR-0015:** Schwelle, gemessene Quote, Entscheidung ein/aus.
+**ADR-0017:** Schwelle, gemessene Quote, Entscheidung ein/aus.
 
 **M4-06 · Dashboard: Fehltrefferquote (1 Session)** — Dashboard-Spur
 
@@ -771,7 +786,7 @@ Eine Zeile pro Ausbaustufe: Baseline (immer das teure Modell), nur Cache, Router
 
 **Aus dieser Tabelle kommt die Zahl fürs README.** Sie kommt aus dem Eval-Set, nicht aus dem Produktivverkehr — und dass sie das tut, steht mit im README (Spec §8).
 
-**ADR-0016:** Router A gegen B, Ergebnis, Entscheidung.
+**ADR-0018:** Router A gegen B, Ergebnis, Entscheidung.
 
 **→ Build in Public, Beitrag 7.** Fragen: Welche Variante hat gewonnen? Um wie viel, bei welchen Kosten? Wo verliert die Gewinner-Variante trotzdem? Hättest du das vorher so getippt?
 
@@ -822,26 +837,30 @@ CLAUDE.md: *„Bei jeder Architekturentscheidung eine kurze Notiz in `docs/decis
 
 Format je ADR: Datum, Entscheidung, betrachtete Alternativen, Begründung. Eine halbe Seite. Am **Tag der Entscheidung** geschrieben, nicht nachträglich rekonstruiert.
 
-| ADR | Woche | Thema |
-|---|---|---|
-| 0001 | W1 | Eigenes Repo statt Workspace-Unterordner |
-| 0002 | W1 | Python-Version, pip statt uv/poetry, Pinning |
-| 0003 | W2 | Kostenrepräsentation (Ganzzahl) und getrennte Latenzmessung |
-| 0004 | W2 | API-Key-Speicherung: Hash-Verfahren |
-| 0005 | W3 | Streaming: Pufferung und Verhalten bei Client-Abbruch |
-| 0006 | W3 | ASGI-Server und Worker-Modell |
-| 0007 | W4 | Deployment-Topologie auf dem VPS |
-| 0008 | W5 | Provider-Abstraktion: wo der Schnitt liegt |
-| 0009 | W6 | Preise als Daten, nicht als Code |
-| 0010 | W6 | Rate-Limit-Algorithmus |
-| 0011 | W7 | Circuit-Breaker-Parameter; django-rq vs. Django-6-Tasks |
-| 0012 | W8 | Eval-Set: Kategorien und Format |
-| 0013 | W10 | Judge-Modell, Rubrik, gemessene Übereinstimmung |
-| 0014 | W11 | Cache-Key: welche Parameter, welche nicht |
-| 0015 | W12 | Semantischer Cache: Schwelle und Abschaltkriterium |
-| 0016 | W14 | Router A gegen B: Ergebnis und Entscheidung |
+| ADR | Woche | Thema | Status |
+|---|---|---|---|
+| 0001 | W1 | Eigenes Repo statt Workspace-Unterordner | ✅ |
+| 0002 | W1 | Python-Version, pip statt uv/poetry, Pinning | ✅ |
+| 0003 | W1 | Backend-Tooling und Repo-Layout (ungeplant, aus M0-02/03) | ✅ |
+| 0004 | W1 | Branch Protection: Classic Rule statt Ruleset (ungeplant, aus M0-03) | ✅ |
+| 0005 | W2 | Kostenrepräsentation (Ganzzahl) und getrennte Latenzmessung | geplant |
+| 0006 | W2 | API-Key-Speicherung: Hash-Verfahren | geplant |
+| 0007 | W3 | Streaming: Pufferung und Verhalten bei Client-Abbruch | geplant |
+| 0008 | W3 | ASGI-Server und Worker-Modell | geplant |
+| 0009 | W4 | Deployment-Topologie auf dem VPS | geplant |
+| 0010 | W5 | Provider-Abstraktion: wo der Schnitt liegt | geplant |
+| 0011 | W6 | Preise als Daten, nicht als Code | geplant |
+| 0012 | W6 | Rate-Limit-Algorithmus | geplant |
+| 0013 | W7 | Circuit-Breaker-Parameter; django-rq vs. Django-6-Tasks | geplant |
+| 0014 | W8 | Eval-Set: Kategorien und Format | geplant |
+| 0015 | W10 | Judge-Modell, Rubrik, gemessene Übereinstimmung | geplant |
+| 0016 | W11 | Cache-Key: welche Parameter, welche nicht | geplant |
+| 0017 | W12 | Semantischer Cache: Schwelle und Abschaltkriterium | geplant |
+| 0018 | W14 | Router A gegen B: Ergebnis und Entscheidung | geplant |
 
-Dazu jeder ungeplante ADR: Wenn du eine Entscheidung triffst, die nicht in dieser Liste steht, bekommt sie trotzdem eine Notiz.
+0003 und 0004 waren im ursprünglichen Plan nicht vorgesehen — M0-02 und M0-03 haben sie gebraucht (Tooling-Layout, Branch Protection), deshalb sind alle danach geplanten Nummern um zwei verschoben gegenüber der ersten Fassung dieses Plans. Genau das ist der Grund, warum eine Nummer erst am Tag der Entscheidung vergeben wird, nicht vorab fest im Plan steht.
+
+Dazu jeder weitere ungeplante ADR: Wenn du eine Entscheidung triffst, die nicht in dieser Liste steht, bekommt sie trotzdem eine Notiz und die nächste freie Nummer.
 
 ---
 
