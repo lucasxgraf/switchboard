@@ -4,6 +4,7 @@ DJANGO_SETTINGS_MODULE = "config.settings.test"
 [tool.ruff]
 target-version = "py314"
 line-length = 88
+extend-exclude = ["*/migrations/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "DJ"]
