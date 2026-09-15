@@ -30,7 +30,13 @@ class HashingTestCase(TestCase):
         self.assertIsNone(result)
 
     def test_deactivated_key_declined(self) -> None:
-        pass
+        api_key = ApiKey.generate_key(name="TestKey")
+        raw_key = api_key.raw_key
+        api_key.active = False
+        api_key.save()
+        result = ApiKey.verify_key(raw_key)
+
+        self.assertIsNone(result)
 
     def test_prefix_readable(self) -> None:
         pass
