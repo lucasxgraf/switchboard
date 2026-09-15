@@ -13,4 +13,8 @@ class ApiKeyAuthentication(BaseAuthentication):
         header = request.headers.get("Authorization")
         if header is None:
             raise AuthenticationFailed("No Authorization header provided.")
+
+        if not header.startswith("Bearer "):
+            raise AuthenticationFailed("Invalid Authorization header format.")
+
         return None

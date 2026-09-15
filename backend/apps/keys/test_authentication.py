@@ -30,7 +30,11 @@ class ApiKeyAuthenticationTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_malformed_header_declined(self) -> None:
-        pass
+        response = self.client.get(
+            "/probe/", HTTP_AUTHORIZATION="sk-irgendwas-ohne-bearer-prefix"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_unknown_key_declined(self) -> None:
         pass
