@@ -39,4 +39,8 @@ class HashingTestCase(TestCase):
         self.assertIsNone(result)
 
     def test_prefix_readable(self) -> None:
-        pass
+        api_key = ApiKey.generate_key(name="TestKey")
+        raw_key = api_key.raw_key
+        reloaded = ApiKey.objects.get(pk=api_key.pk)
+
+        self.assertEqual(reloaded.prefix, raw_key[:11])
