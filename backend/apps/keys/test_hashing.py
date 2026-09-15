@@ -14,7 +14,14 @@ class HashingTestCase(TestCase):
         self.assertNotEqual(api_key.hash, raw_key)
 
     def test_valid_key_found(self) -> None:
-        pass
+
+        api_key = ApiKey.generate_key(name="TestKey")
+        raw_key = api_key.raw_key
+        verified_api_key = ApiKey.verify_key(raw_key)
+
+        self.assertIsNotNone(verified_api_key)
+        assert verified_api_key is not None
+        self.assertEqual(verified_api_key.pk, api_key.pk)
 
     def test_invalid_key_declined(self) -> None:
         pass
