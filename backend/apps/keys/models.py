@@ -21,15 +21,33 @@ class ApiKey(models.Model):
     def __str__(self) -> str:
         return self.name
 
+    @staticmethod
+    def _hash(raw_key: str) -> str:
+        return hmac.new(
+            settings.API_KEY_HASH_SECRET.encode(), raw_key.encode(), hashlib.sha256
+        ).hexdigest()
+
     @classmethod
     def generate_key(cls, name: str) -> ApiKey:
         raw_key = f"sk-{secrets.token_urlsafe(32)}"
         prefix = raw_key[:11]
-        digest = hmac.new(
-            settings.API_KEY_HASH_SECRET.encode(), raw_key.encode(), hashlib.sha256
-        ).hexdigest()
+        digest = cls._hash(raw_key)
         instance = cls.objects.create(name=name, prefix=prefix, hash=digest)
         instance.raw_key = raw_key
+        return instance
+
+    @classmethod
+    def verify_key(cls, raw_key: str) -> ApiKey | None:
+        prefix = raw_key[:11]
+        try:
+            instance = cls.objects.get(prefix=prefix)
+        except cls.DoesNotExist:
+            return None
+        digest = cls._hash(raw_key)
+        if not hmac.compare_digest(digest, instance.hash):
+            return None
+        if not instance.active:
+            return None
         return instance
 
 
