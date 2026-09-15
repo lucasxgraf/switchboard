@@ -1,3 +1,5 @@
+import secrets
+
 from django.test import TestCase, override_settings
 from django.urls import path
 from rest_framework import status
@@ -37,7 +39,11 @@ class ApiKeyAuthenticationTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_unknown_key_declined(self) -> None:
-        pass
+        fake_key = f"sk-{secrets.token_urlsafe(32)}"
+
+        response = self.client.get("/probe/", HTTP_AUTHORIZATION=f"Bearer {fake_key}")
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_valid_key_authenticates(self) -> None:
         pass
