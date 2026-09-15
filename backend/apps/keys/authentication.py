@@ -17,4 +17,9 @@ class ApiKeyAuthentication(BaseAuthentication):
         if not header.startswith("Bearer "):
             raise AuthenticationFailed("Invalid Authorization header format.")
 
-        return None
+        raw_key = header.removeprefix("Bearer ")
+        api_key = ApiKey.verify_key(raw_key)
+        if api_key is None:
+            raise AuthenticationFailed("Invalid API key.")
+
+        return None, api_key
