@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 from rest_framework.views import APIView
 
 from .authentication import ApiKeyAuthentication
+from .models import ApiKey
 
 
 class ProbeView(APIView):
@@ -46,4 +47,11 @@ class ApiKeyAuthenticationTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_valid_key_authenticates(self) -> None:
-        pass
+        api_key = ApiKey.generate_key(name="TestKey")
+
+        response = self.client.get(
+            "/probe/", HTTP_AUTHORIZATION=f"Bearer {api_key.raw_key}"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["api_key_name"], "TestKey")

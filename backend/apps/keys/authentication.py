@@ -22,4 +22,6 @@ class ApiKeyAuthentication(BaseAuthentication):
         if api_key is None:
             raise AuthenticationFailed("Invalid API key.")
 
+        request.api_key = api_key
+
         return None, api_key
