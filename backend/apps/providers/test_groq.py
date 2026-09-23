@@ -3,6 +3,7 @@ from django.test import TestCase
 
 from .groq import (
     GroqAdapter,
+    InvalidProviderResponseError,
     ProviderAuthenticationError,
     ProviderServerError,
     RateLimitError,
@@ -88,6 +89,36 @@ class GroqAdapterTest(TestCase):
         adapter = GroqAdapter(client=client, api_key="test-key")
 
         with self.assertRaises(ProviderAuthenticationError):
+            adapter.complete(
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": "Hi"}],
+            )
+
+    def test_invalid_provider_response_error_no_json(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, content=b"not valid json")
+
+        client = httpx.Client(transport=httpx.MockTransport(handler))
+
+        adapter = GroqAdapter(client=client, api_key="test-key")
+
+        with self.assertRaises(InvalidProviderResponseError):
+            adapter.complete(
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": "Hi"}],
+            )
+
+    def test_invalid_provider_response_error_invalid_json(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200, json={"usage": {"prompt_tokens": 5, "completion_tokens": 3}}
+            )
+
+        client = httpx.Client(transport=httpx.MockTransport(handler))
+
+        adapter = GroqAdapter(client=client, api_key="test-key")
+
+        with self.assertRaises(InvalidProviderResponseError):
             adapter.complete(
                 model="llama-3.1-8b-instant",
                 messages=[{"role": "user", "content": "Hi"}],

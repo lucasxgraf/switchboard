@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 
 import httpx
@@ -57,10 +58,13 @@ class GroqAdapter:
         if response.status_code == 500:
             raise ProviderServerError
 
-        data = response.json()
+        try:
+            data = response.json()
 
-        return ProviderResponse(
-            data["choices"][0]["message"]["content"],
-            data["usage"]["prompt_tokens"],
-            data["usage"]["completion_tokens"],
-        )
+            return ProviderResponse(
+                data["choices"][0]["message"]["content"],
+                data["usage"]["prompt_tokens"],
+                data["usage"]["completion_tokens"],
+            )
+        except (json.JSONDecodeError, KeyError, IndexError) as e:
+            raise InvalidProviderResponseError from e
