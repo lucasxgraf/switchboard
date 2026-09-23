@@ -6,11 +6,16 @@ from .groq import (
     InvalidProviderResponseError,
     ProviderAuthenticationError,
     ProviderServerError,
+    ProviderTimeoutError,
     RateLimitError,
 )
 
 
 class GroqAdapterTest(TestCase):
+    def setUp(self) -> None:
+        self.model = "llama-3.1-8b-instant"
+        self.messages = [{"role": "user", "content": "Hi"}]
+
     def test_complete(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(
@@ -22,13 +27,9 @@ class GroqAdapterTest(TestCase):
             )
 
         client = httpx.Client(transport=httpx.MockTransport(handler))
-
         adapter = GroqAdapter(client=client, api_key="test-key")
 
-        response = adapter.complete(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": "Hi"}],
-        )
+        response = adapter.complete(model=self.model, messages=self.messages)
 
         self.assertEqual(response.content, "Hi there")
         self.assertEqual(response.prompt_tokens, 5)
@@ -45,14 +46,10 @@ class GroqAdapterTest(TestCase):
             )
 
         client = httpx.Client(transport=httpx.MockTransport(handler))
-
         adapter = GroqAdapter(client=client, api_key="test-key")
 
         with self.assertRaises(RateLimitError):
-            adapter.complete(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": "Hi"}],
-            )
+            adapter.complete(model=self.model, messages=self.messages)
 
     def test_provider_server_error(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
@@ -65,14 +62,10 @@ class GroqAdapterTest(TestCase):
             )
 
         client = httpx.Client(transport=httpx.MockTransport(handler))
-
         adapter = GroqAdapter(client=client, api_key="test-key")
 
         with self.assertRaises(ProviderServerError):
-            adapter.complete(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": "Hi"}],
-            )
+            adapter.complete(model=self.model, messages=self.messages)
 
     def test_provider_authentication_error(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
@@ -85,28 +78,20 @@ class GroqAdapterTest(TestCase):
             )
 
         client = httpx.Client(transport=httpx.MockTransport(handler))
-
         adapter = GroqAdapter(client=client, api_key="test-key")
 
         with self.assertRaises(ProviderAuthenticationError):
-            adapter.complete(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": "Hi"}],
-            )
+            adapter.complete(model=self.model, messages=self.messages)
 
     def test_invalid_provider_response_error_no_json(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(200, content=b"not valid json")
 
         client = httpx.Client(transport=httpx.MockTransport(handler))
-
         adapter = GroqAdapter(client=client, api_key="test-key")
 
         with self.assertRaises(InvalidProviderResponseError):
-            adapter.complete(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": "Hi"}],
-            )
+            adapter.complete(model=self.model, messages=self.messages)
 
     def test_invalid_provider_response_error_invalid_json(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
@@ -115,11 +100,17 @@ class GroqAdapterTest(TestCase):
             )
 
         client = httpx.Client(transport=httpx.MockTransport(handler))
-
         adapter = GroqAdapter(client=client, api_key="test-key")
 
         with self.assertRaises(InvalidProviderResponseError):
-            adapter.complete(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": "Hi"}],
-            )
+            adapter.complete(model=self.model, messages=self.messages)
+
+    def test_provider_timeout_error(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            raise httpx.TimeoutException("timed out")
+
+        client = httpx.Client(transport=httpx.MockTransport(handler))
+        adapter = GroqAdapter(client=client, api_key="test-key")
+
+        with self.assertRaises(ProviderTimeoutError):
+            adapter.complete(model=self.model, messages=self.messages)

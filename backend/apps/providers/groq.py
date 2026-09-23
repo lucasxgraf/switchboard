@@ -40,15 +40,7 @@ class GroqAdapter:
         self.client = client
         self.api_key = api_key
 
-    def complete(self, model: str, messages: list[dict[str, str]]) -> ProviderResponse:
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        authorization = f"Bearer {self.api_key}"
-        body = {"model": model, "messages": messages}
-
-        response = self.client.post(
-            url, headers={"Authorization": authorization}, json=body
-        )
-
+    def _raise_for_status(self, response: httpx.Response) -> None:
         if response.status_code == 401:
             raise ProviderAuthenticationError
 
@@ -58,6 +50,7 @@ class GroqAdapter:
         if response.status_code == 500:
             raise ProviderServerError
 
+    def _parse_response(self, response: httpx.Response) -> ProviderResponse:
         try:
             data = response.json()
 
@@ -68,3 +61,18 @@ class GroqAdapter:
             )
         except (json.JSONDecodeError, KeyError, IndexError) as e:
             raise InvalidProviderResponseError from e
+
+    def complete(self, model: str, messages: list[dict[str, str]]) -> ProviderResponse:
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        authorization = f"Bearer {self.api_key}"
+        body = {"model": model, "messages": messages}
+
+        try:
+            response = self.client.post(
+                url, headers={"Authorization": authorization}, json=body
+            )
+        except httpx.TimeoutException as e:
+            raise ProviderTimeoutError from e
+
+        self._raise_for_status(response)
+        return self._parse_response(response)
