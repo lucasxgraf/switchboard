@@ -1,7 +1,7 @@
 import httpx
 from django.test import TestCase
 
-from .groq import GroqAdapter, RateLimitError
+from .groq import GroqAdapter, ProviderServerError, RateLimitError
 
 
 class GroqAdapterTest(TestCase):
@@ -43,6 +43,26 @@ class GroqAdapterTest(TestCase):
         adapter = GroqAdapter(client=client, api_key="test-key")
 
         with self.assertRaises(RateLimitError):
+            adapter.complete(
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": "Hi"}],
+            )
+
+    def test_provider_server_error(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                500,
+                json={
+                    "choices": [{"message": {"content": "Hi there"}}],
+                    "usage": {"prompt_tokens": 5, "completion_tokens": 3},
+                },
+            )
+
+        client = httpx.Client(transport=httpx.MockTransport(handler))
+
+        adapter = GroqAdapter(client=client, api_key="test-key")
+
+        with self.assertRaises(ProviderServerError):
             adapter.complete(
                 model="llama-3.1-8b-instant",
                 messages=[{"role": "user", "content": "Hi"}],

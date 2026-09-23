@@ -51,6 +51,9 @@ class GroqAdapter:
         if response.status_code == 429:
             raise RateLimitError
 
+        if response.status_code == 500:
+            raise ProviderServerError
+
         data = response.json()
 
         return ProviderResponse(
