@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "apps.core",
     "apps.keys",
+    "apps.providers",
 ]
 
 MIDDLEWARE = [
