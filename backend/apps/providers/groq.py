@@ -48,6 +48,9 @@ class GroqAdapter:
             url, headers={"Authorization": authorization}, json=body
         )
 
+        if response.status_code == 401:
+            raise ProviderAuthenticationError
+
         if response.status_code == 429:
             raise RateLimitError
 
