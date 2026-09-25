@@ -19,8 +19,10 @@ from django.contrib import admin
 from django.urls import path
 
 from apps.core.views import HealthCheckView
+from apps.proxy.views import ChatCompletionsView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("healthz/", HealthCheckView.as_view(), name="health_check"),
+    path("v1/chat/completions", ChatCompletionsView.as_view(), name="chat_completions"),
 ]

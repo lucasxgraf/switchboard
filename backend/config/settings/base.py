@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.keys",
     "apps.providers",
+    "apps.proxy",
 ]
 
 MIDDLEWARE = [
