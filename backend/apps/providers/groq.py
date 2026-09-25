@@ -7,6 +7,7 @@ import httpx
 @dataclass
 class ProviderResponse:
     content: str
+    finish_reason: str
     prompt_tokens: int
     completion_tokens: int
 
@@ -56,6 +57,7 @@ class GroqAdapter:
 
             return ProviderResponse(
                 data["choices"][0]["message"]["content"],
+                data["choices"][0]["finish_reason"],
                 data["usage"]["prompt_tokens"],
                 data["usage"]["completion_tokens"],
             )

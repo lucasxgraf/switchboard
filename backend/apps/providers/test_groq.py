@@ -21,7 +21,9 @@ class GroqAdapterTest(TestCase):
             return httpx.Response(
                 200,
                 json={
-                    "choices": [{"message": {"content": "Hi there"}}],
+                    "choices": [
+                        {"message": {"content": "Hi there"}, "finish_reason": "stop"}
+                    ],
                     "usage": {"prompt_tokens": 5, "completion_tokens": 3},
                 },
             )
@@ -32,6 +34,7 @@ class GroqAdapterTest(TestCase):
         response = adapter.complete(model=self.model, messages=self.messages)
 
         self.assertEqual(response.content, "Hi there")
+        self.assertEqual(response.finish_reason, "stop")
         self.assertEqual(response.prompt_tokens, 5)
         self.assertEqual(response.completion_tokens, 3)
 
