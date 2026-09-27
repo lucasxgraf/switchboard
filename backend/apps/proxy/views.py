@@ -9,7 +9,12 @@ from rest_framework.views import APIView
 
 from apps.keys.authentication import ApiKeyAuthentication
 from apps.keys.models import RequestLog
-from apps.providers.groq import GroqAdapter, RateLimitError
+from apps.providers.groq import (
+    GroqAdapter,
+    ProviderAuthenticationError,
+    ProviderServerError,
+    RateLimitError,
+)
 
 
 class ChatCompletionsView(APIView):
@@ -53,6 +58,31 @@ class ChatCompletionsView(APIView):
             )
 
             return Response(error_body, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        except (ProviderServerError, ProviderAuthenticationError) as e:
+            error_body = {
+                "error": {
+                    "message": "The upstream provider returned an error.",
+                    "type": "server_error",
+                    "code": "server_error",
+                }
+            }
+            gateway_latency_ms = int((time.perf_counter() - gateway_start) * 1000)
+            provider_latency_ms = int((time.perf_counter() - provider_start) * 1000)
+
+            request_log = RequestLog.objects.create(
+                api_key=request.api_key,
+                requested_model=model,
+                used_model=model,
+                provider="groq",
+                prompt_tokens=None,
+                completion_tokens=None,
+                gateway_latency_ms=gateway_latency_ms,
+                provider_latency_ms=provider_latency_ms,
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                error_code=type(e).__name__,
+            )
+
+            return Response(error_body, status=status.HTTP_502_BAD_GATEWAY)
 
         provider_latency_ms = int((time.perf_counter() - provider_start) * 1000)
         gateway_latency_ms = int((time.perf_counter() - gateway_start) * 1000)
