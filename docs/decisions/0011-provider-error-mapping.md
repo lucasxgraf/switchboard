@@ -12,6 +12,9 @@
 - `ProviderServerError` and `ProviderAuthenticationError` are handled in one shared `except` branch and get an identical status code (502) and identical error envelope (`type`/`code` = `"server_error"`) for the client — the client should not be able to tell whether Groq itself is down or Switchboard's own Groq key is broken, to avoid leaking internal details.
 - Internally (`RequestLog.error_code`), the two cases are deliberately distinguished, via `type(e).__name__` (`"ProviderServerError"` or `"ProviderAuthenticationError"`).
 
+## Addition to decision — 2026-09-28
+- `InvalidProviderResponseError` joins the same shared `except` branch as `ProviderServerError`/`ProviderAuthenticationError` (identical 502 envelope, `error_code` distinguished internally via `type(e).__name__`). It fits particularly well: 502's actual definition is "gateway received an invalid response from the upstream," which is exactly this case (Groq returns 200 but the body is malformed or missing expected fields).
+
 ## Context
 - M1-06 Test 4 requires a defined status code on a provider error, plus a log entry.
 - The client authenticates against Switchboard, not against Groq — passing Groq's own status codes through 1:1 (especially 401) would falsely signal to the client that its own Switchboard key is invalid, when the actual problem is Switchboard's Groq key.
@@ -26,8 +29,8 @@
 - Unifying `RequestLog.error_code` too (identical to `error.code` in the body, as with `RateLimitError`) — rejected. Unlike the rate-limit case, there's a real reason for different values here: the operational response differs (wait out Groq vs. rotate Switchboard's own key immediately), and Sentry isn't wired up yet (not until M1-09) — `RequestLog` is currently the only durable place that captures this distinction.
 
 ## Consequences
-- The remaining four error paths follow the same pattern; no further ADR needed unless a genuinely new trade-off comes up.
-- Currently duplicated code (latency measurement + `RequestLog.create`, once per `except` branch) will be refactored once all five paths exist.
+- All five error paths are implemented (2026-09-28) and follow this pattern; no further ADR needed unless a genuinely new trade-off comes up.
+- Currently duplicated code (latency measurement + `RequestLog.create`, once per `except` branch) is now due for the refactor already flagged when this ADR was written — all five paths exist.
 - Once M2's own rate limiting arrives, there will be two distinct sources of a 429 (Groq's limit vs. Switchboard's own) — these must be kept clearly apart, among other things around the `Retry-After` header, which only makes sense for Switchboard's own limit.
 
 ## Addition to consequences — 2026-09-27

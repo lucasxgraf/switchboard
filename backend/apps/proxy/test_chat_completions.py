@@ -334,3 +334,59 @@ class ChatCompletionsTest(TestCase):
         self.assertIsNone(request_log.cost_micro_cents)
         assert request_log.cost_micro_cents is None
         self.assertEqual(request_log.error_code, "timeout_error")
+
+    def test_invalid_provider_response_error_returns_502(self) -> None:
+        apikey = ApiKey.generate_key(name="testapikey")
+
+        with patch.object(httpx.Client, "post", return_value=httpx.Response(200)):
+            response = self.client.post(
+                self.url,
+                {"model": self.model, "messages": self.messages},
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {apikey.raw_key}",
+            )
+
+        data = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(
+            data["error"]["message"],
+            "The upstream provider returned an error.",
+        )
+        self.assertEqual(data["error"]["type"], "server_error")
+        self.assertEqual(data["error"]["code"], "server_error")
+
+    def test_invalid_provider_response_error_request_log(self) -> None:
+        apikey = ApiKey.generate_key(name="testapikey")
+
+        with patch.object(httpx.Client, "post", return_value=httpx.Response(200)):
+            response = self.client.post(
+                self.url,
+                {"model": self.model, "messages": self.messages},
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {apikey.raw_key}",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+
+        request_log = RequestLog.objects.get()
+
+        self.assertEqual(request_log.api_key, apikey)
+        self.assertEqual(request_log.requested_model, self.model)
+        self.assertEqual(request_log.used_model, self.model)
+        self.assertEqual(request_log.status_code, status.HTTP_502_BAD_GATEWAY)
+        self.assertEqual(request_log.provider, "groq")
+        self.assertEqual(request_log.prompt_tokens, None)
+        self.assertEqual(request_log.completion_tokens, None)
+        self.assertIsNotNone(request_log.gateway_latency_ms)
+        assert request_log.gateway_latency_ms is not None
+        self.assertGreaterEqual(request_log.gateway_latency_ms, 0)
+        self.assertIsNotNone(request_log.provider_latency_ms)
+        assert request_log.provider_latency_ms is not None
+        self.assertGreaterEqual(request_log.provider_latency_ms, 0)
+        self.assertLessEqual(
+            request_log.provider_latency_ms, request_log.gateway_latency_ms
+        )
+        self.assertIsNone(request_log.cost_micro_cents)
+        assert request_log.cost_micro_cents is None
+        self.assertEqual(request_log.error_code, "InvalidProviderResponseError")

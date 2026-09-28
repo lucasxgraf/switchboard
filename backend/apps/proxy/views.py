@@ -11,6 +11,7 @@ from apps.keys.authentication import ApiKeyAuthentication
 from apps.keys.models import RequestLog
 from apps.providers.groq import (
     GroqAdapter,
+    InvalidProviderResponseError,
     ProviderAuthenticationError,
     ProviderServerError,
     ProviderTimeoutError,
@@ -59,7 +60,11 @@ class ChatCompletionsView(APIView):
             )
 
             return Response(error_body, status=status.HTTP_429_TOO_MANY_REQUESTS)
-        except (ProviderServerError, ProviderAuthenticationError) as e:
+        except (
+            ProviderServerError,
+            ProviderAuthenticationError,
+            InvalidProviderResponseError,
+        ) as e:
             error_body = {
                 "error": {
                     "message": "The upstream provider returned an error.",
