@@ -17,6 +17,7 @@ from apps.providers.groq import (
     ProviderTimeoutError,
     RateLimitError,
 )
+from apps.proxy.serializers import ChatCompletionRequestSerializer
 
 
 class ChatCompletionsView(APIView):
@@ -25,8 +26,18 @@ class ChatCompletionsView(APIView):
     def post(self, request: Request) -> Response:
         gateway_start = time.perf_counter()
 
-        model = request.data["model"]
-        messages = request.data["messages"]
+        serializer = ChatCompletionRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            error_body = {
+                "error": {
+                    "message": "The request body is missing required fields.",
+                    "type": "invalid_request_error",
+                    "code": "invalid_request_error",
+                }
+            }
+            return Response(error_body, status=status.HTTP_400_BAD_REQUEST)
+        model = serializer.validated_data["model"]
+        messages = serializer.validated_data["messages"]
 
         rate_limit_error_code = "rate_limit_exceeded"
 

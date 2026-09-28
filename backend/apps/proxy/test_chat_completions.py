@@ -390,3 +390,43 @@ class ChatCompletionsTest(TestCase):
         self.assertIsNone(request_log.cost_micro_cents)
         assert request_log.cost_micro_cents is None
         self.assertEqual(request_log.error_code, "InvalidProviderResponseError")
+
+    def test_missing_model_returns_400(self) -> None:
+        apikey = ApiKey.generate_key(name="testapikey")
+
+        response = self.client.post(
+            self.url,
+            {"messages": self.messages},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {apikey.raw_key}",
+        )
+
+        data = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            data["error"]["message"],
+            "The request body is missing required fields.",
+        )
+        self.assertEqual(data["error"]["type"], "invalid_request_error")
+        self.assertEqual(data["error"]["code"], "invalid_request_error")
+
+    def test_missing_messages_returns_400(self) -> None:
+        apikey = ApiKey.generate_key(name="testapikey")
+
+        response = self.client.post(
+            self.url,
+            {"model": self.model},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {apikey.raw_key}",
+        )
+
+        data = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            data["error"]["message"],
+            "The request body is missing required fields.",
+        )
+        self.assertEqual(data["error"]["type"], "invalid_request_error")
+        self.assertEqual(data["error"]["code"], "invalid_request_error")
