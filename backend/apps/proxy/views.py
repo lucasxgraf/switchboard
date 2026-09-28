@@ -13,6 +13,7 @@ from apps.providers.groq import (
     GroqAdapter,
     ProviderAuthenticationError,
     ProviderServerError,
+    ProviderTimeoutError,
     RateLimitError,
 )
 
@@ -83,6 +84,31 @@ class ChatCompletionsView(APIView):
             )
 
             return Response(error_body, status=status.HTTP_502_BAD_GATEWAY)
+        except ProviderTimeoutError:
+            error_body = {
+                "error": {
+                    "message": "The upstream provider took too long to respond.",
+                    "type": "timeout_error",
+                    "code": "timeout_error",
+                }
+            }
+            gateway_latency_ms = int((time.perf_counter() - gateway_start) * 1000)
+            provider_latency_ms = int((time.perf_counter() - provider_start) * 1000)
+
+            request_log = RequestLog.objects.create(
+                api_key=request.api_key,
+                requested_model=model,
+                used_model=model,
+                provider="groq",
+                prompt_tokens=None,
+                completion_tokens=None,
+                gateway_latency_ms=gateway_latency_ms,
+                provider_latency_ms=provider_latency_ms,
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                error_code="timeout_error",
+            )
+
+            return Response(error_body, status=status.HTTP_504_GATEWAY_TIMEOUT)
 
         provider_latency_ms = int((time.perf_counter() - provider_start) * 1000)
         gateway_latency_ms = int((time.perf_counter() - gateway_start) * 1000)

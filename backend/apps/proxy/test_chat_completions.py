@@ -274,3 +274,63 @@ class ChatCompletionsTest(TestCase):
         self.assertIsNone(request_log.cost_micro_cents)
         assert request_log.cost_micro_cents is None
         self.assertEqual(request_log.error_code, "ProviderAuthenticationError")
+
+    def test_provider_timeout_error_returns_504(self) -> None:
+        apikey = ApiKey.generate_key(name="testapikey")
+
+        with patch.object(
+            httpx.Client, "post", side_effect=httpx.TimeoutException("timed out")
+        ):
+            response = self.client.post(
+                self.url,
+                {"model": self.model, "messages": self.messages},
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {apikey.raw_key}",
+            )
+
+        data = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_504_GATEWAY_TIMEOUT)
+        self.assertEqual(
+            data["error"]["message"],
+            "The upstream provider took too long to respond.",
+        )
+        self.assertEqual(data["error"]["type"], "timeout_error")
+        self.assertEqual(data["error"]["code"], "timeout_error")
+
+    def test_provider_timeout_error_request_log(self) -> None:
+        apikey = ApiKey.generate_key(name="testapikey")
+
+        with patch.object(
+            httpx.Client, "post", side_effect=httpx.TimeoutException("timed out")
+        ):
+            response = self.client.post(
+                self.url,
+                {"model": self.model, "messages": self.messages},
+                format="json",
+                HTTP_AUTHORIZATION=f"Bearer {apikey.raw_key}",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_504_GATEWAY_TIMEOUT)
+
+        request_log = RequestLog.objects.get()
+
+        self.assertEqual(request_log.api_key, apikey)
+        self.assertEqual(request_log.requested_model, self.model)
+        self.assertEqual(request_log.used_model, self.model)
+        self.assertEqual(request_log.status_code, status.HTTP_504_GATEWAY_TIMEOUT)
+        self.assertEqual(request_log.provider, "groq")
+        self.assertEqual(request_log.prompt_tokens, None)
+        self.assertEqual(request_log.completion_tokens, None)
+        self.assertIsNotNone(request_log.gateway_latency_ms)
+        assert request_log.gateway_latency_ms is not None
+        self.assertGreaterEqual(request_log.gateway_latency_ms, 0)
+        self.assertIsNotNone(request_log.provider_latency_ms)
+        assert request_log.provider_latency_ms is not None
+        self.assertGreaterEqual(request_log.provider_latency_ms, 0)
+        self.assertLessEqual(
+            request_log.provider_latency_ms, request_log.gateway_latency_ms
+        )
+        self.assertIsNone(request_log.cost_micro_cents)
+        assert request_log.cost_micro_cents is None
+        self.assertEqual(request_log.error_code, "timeout_error")
